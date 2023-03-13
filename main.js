@@ -1,10 +1,10 @@
 // Require the necessary discord.js classes
-const { Client, Collection } = require('discord.js');
+const { Client, Collection } = require("discord.js");
 const fs = require("fs");
-require("dotenv").config()
+require("dotenv").config();
 
 // Create a new client instance
-const client = new Client({ intents: 33667/*[Intents.FLAGS.GUILDS]*/ });
+const client = new Client({ intents: 33667 /*[Intents.FLAGS.GUILDS]*/ });
 
 client.commands = new Collection();
 /*
