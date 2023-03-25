@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const ytSearch = require("yt-search");
+const songFinder = require("../utils/songFinder");
 const ytdl = require("ytdl-core");
 const {
   createAudioPlayer,
@@ -7,6 +7,7 @@ const {
   joinVoiceChannel,
   VoiceConnectionStatus,
   entersState,
+  AudioPlayerStatus,
 } = require("@discordjs/voice");
 
 module.exports = {
@@ -34,42 +35,60 @@ module.exports = {
     player.on("error", (error) => {
       console.error("Error:", error.message);
     });
+    player.on(AudioPlayerStatus.Playing, () => {
+      console.log("The audio player has started playing!");
+    });
+    player.on(AudioPlayerStatus.AutoPaused, () => {
+      console.log("The audio player has paused!");
+    });
+    player.on(AudioPlayerStatus.Buffering, () => {
+      console.log("The audio player has buffering!");
+    });
     let userQuery = interaction.options._hoistedOptions[0].value;
     let song = await songFinder(userQuery);
-    if (ytdl.validateURL(song.url)) {
-      const stream = createAudioResource(
-        ytdl(song.url, { filter: "audioonly" })
-      );
-      joinVoiceChannel({
-        channelId: voiceChannelId,
-        guildId: interaction.guild.id,
-        adapterCreator: interaction.guild.voiceAdapterCreator,
-      }).subscribe(player);
-      player.play(stream);
+    if (!ytdl.validateURL(song.url)) {
+      return interaction.reply({
+        content: "Invalid URL",
+        ephemeral: true,
+      });
     }
-    connection.on(
-      VoiceConnectionStatus.Disconnected,
-      async (oldState, newState) => {
-        try {
-          await Promise.race([
-            entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-            entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-          ]);
-          // Seems to be reconnecting to a new channel - ignore disconnect
-        } catch (error) {
-          // Seems to be a real disconnect which SHOULDN'T be recovered from
-          connection.destroy();
-        }
-      }
-    );
-    await interaction.reply({
-      content: `You searched for ${song.title}!`,
-      ephemeral: true,
-    });
-  },
-};
+    const stream = createAudioResource(ytdl(song.url, { filter: "audioonly" }));
+    joinVoiceChannel({
+      channelId: voiceChannelId,
+      guildId: interaction.guild.id,
+      adapterCreator: interaction.guild.voiceAdapterCreator,
+    }).subscribe(player);
+    player.play(stream);
 
-const songFinder = async (query) => {
-  let songResult = await ytSearch(query);
-  return songResult.videos.length > 1 ? songResult.videos[0] : null;
+    // if (ytdl.validateURL(song.url)) {
+    //   const stream = createAudioResource(
+    //     ytdl(song.url, { filter: "audioonly" })
+    //   );
+    //   joinVoiceChannel({
+    //     channelId: voiceChannelId,
+    //     guildId: interaction.guild.id,
+    //     adapterCreator: interaction.guild.voiceAdapterCreator,
+    //   }).subscribe(player);
+    //   player.play(stream);
+    // }
+    // connection.on(
+    //   VoiceConnectionStatus.Disconnected,
+    //   async (oldState, newState) => {
+    //     try {
+    //       await Promise.race([
+    //         entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+    //         entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+    //       ]);
+    //       // Seems to be reconnecting to a new channel - ignore disconnect
+    //     } catch (error) {
+    //       // Seems to be a real disconnect which SHOULDN'T be recovered from
+    //       connection.destroy();
+    //     }
+    //   }
+    // );
+    // await interaction.reply({
+    //   content: `You searched for ${song.title}!`,
+    //   ephemeral: true,
+    // });
+  },
 };
