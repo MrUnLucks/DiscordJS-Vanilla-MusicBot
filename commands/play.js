@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const songFinder = require("../utils/songFinder");
 const ytdl = require("ytdl-core");
+const ytstream = require("play-dl");
 const {
   createAudioPlayer,
   createAudioResource,
@@ -8,6 +9,7 @@ const {
   VoiceConnectionStatus,
   entersState,
   AudioPlayerStatus,
+  NoSubscriberBehavior,
 } = require("@discordjs/voice");
 
 module.exports = {
@@ -31,7 +33,11 @@ module.exports = {
         ephemeral: true,
       });
     }
-    let player = createAudioPlayer();
+    let player = createAudioPlayer({
+      behaviors: {
+        noSubscriber: NoSubscriberBehavior.Play,
+      },
+    });
     player.on("error", (error) => {
       console.error("Error:", error.message);
     });
@@ -46,19 +52,46 @@ module.exports = {
     });
     let userQuery = interaction.options._hoistedOptions[0].value;
     let song = await songFinder(userQuery);
-    if (!ytdl.validateURL(song.url)) {
+    if (!song) {
+      return interaction.reply({
+        content: "No videos for this query",
+        ephemeral: true,
+      });
+    }
+
+    if (!ytstream.yt_validate(song.url)) {
       return interaction.reply({
         content: "Invalid URL",
         ephemeral: true,
       });
     }
-    const stream = createAudioResource(ytdl(song.url, { filter: "audioonly" }));
-    joinVoiceChannel({
+    const connection = joinVoiceChannel({
       channelId: voiceChannelId,
       guildId: interaction.guild.id,
       adapterCreator: interaction.guild.voiceAdapterCreator,
-    }).subscribe(player);
-    player.play(stream);
+    });
+    let stream = await ytstream.stream(song.url);
+
+    let resource = createAudioResource(stream.stream, {
+      inputType: stream.type,
+    });
+
+    player.play(resource);
+
+    connection.subscribe(player);
+    //--
+    // let streamTemp = ytstream.stream(song.url);
+    // const stream = createAudioResource(streamTemp);
+    // joinVoiceChannel({
+    //   channelId: voiceChannelId,
+    //   guildId: interaction.guild.id,
+    //   adapterCreator: interaction.guild.voiceAdapterCreator,
+    // }).subscribe(player);
+    // interaction.reply({
+    //   content: "Playing",
+    //   ephemeral: true,
+    // });
+    // player.play(stream);
 
     // if (ytdl.validateURL(song.url)) {
     //   const stream = createAudioResource(
