@@ -17,8 +17,8 @@ module.exports = {
   data: new SlashCommandBuilder().setName("skip").setDescription("Skip a song"),
   async execute(interaction) {
     try {
-      const skippedSong = skipSong();
-      interaction.reply({ content: `Skipped ${skippedSong}` });
+      const skippedSong = await skipSong();
+      interaction.reply({ content: `Skipped ${skippedSong.title}` });
     } catch (err) {
       interaction.reply({ content: "No songs in queue!" });
     }

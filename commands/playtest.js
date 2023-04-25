@@ -12,6 +12,7 @@ const {
   getVoiceConnection,
 } = require("@discordjs/voice");
 const { playSong, player } = require("../runtime/player");
+let { interactionGuildId } = require("../runtime/player");
 const { queue, queueAdd } = require("../runtime/queue");
 
 module.exports = {
@@ -30,14 +31,16 @@ module.exports = {
       interaction.member.user.id
     );
     const voiceChannelId = member.voice.channelId;
+    //TODO the VC can be exported into his separate module
     //If the VoiceConnection is not established create one
     if (!getVoiceConnection(interaction.guild.id)) {
-      joinVoiceChannel({
+      const connection = joinVoiceChannel({
         channelId: voiceChannelId,
         guildId: interaction.guild.id,
         adapterCreator: interaction.guild.voiceAdapterCreator,
       });
-      getVoiceConnection(interaction.guild.id).subscribe(player);
+      connection.subscribe(player);
+      interactionGuildId = interaction.guild.id;
     }
     let userQuery = interaction.options._hoistedOptions[0].value;
     //Search song
