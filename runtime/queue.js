@@ -1,23 +1,16 @@
-let state = {
-  queue: [],
-  currentSong: null,
-  paused: false,
+let queue = [];
+
+const queueAdd = (song) => {
+  queue.push(song);
 };
 
-const add = (song) => {
-  state.queue.push(song);
-  state.paused = false;
-};
-
-const skip = () => {
-  if (state.queue.length === 0) {
+const queueSkip = () => {
+  if (queue.length === 0) {
     return undefined;
   }
-  const skippedSong = state.queue[0];
-  state.queue.shift();
-  state.currentSong = state.queue[0];
-  state.paused = false;
+  const skippedSong = queue[0];
+  queue.shift();
   return skippedSong;
 };
 
-module.exports = { state, skip, add };
+module.exports = { queue, queueAdd, queueSkip };

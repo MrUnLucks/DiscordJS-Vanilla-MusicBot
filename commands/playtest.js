@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const songFinder = require("../utils/songFinder");
-const ytstream = require("play-dl");
+const { yt_validate } = require("play-dl");
 const {
   createAudioPlayer,
   createAudioResource,
@@ -11,8 +11,8 @@ const {
   NoSubscriberBehavior,
   getVoiceConnection,
 } = require("@discordjs/voice");
-const { add: queueAdd, state } = require("../runtime/queue");
-const player = require("../runtime/player");
+const { playSong, player } = require("../runtime/player");
+const { queue, queueAdd } = require("../runtime/queue");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -25,6 +25,7 @@ module.exports = {
         .setRequired(true)
     ),
   async execute(interaction) {
+    //Checks on user state
     const member = interaction.guild.members.cache.get(
       interaction.member.user.id
     );
@@ -36,38 +37,36 @@ module.exports = {
         guildId: interaction.guild.id,
         adapterCreator: interaction.guild.voiceAdapterCreator,
       });
+      getVoiceConnection(interaction.guild.id).subscribe(player);
     }
     let userQuery = interaction.options._hoistedOptions[0].value;
-    //Checks
+    //Search song
     let song = await songFinder(userQuery);
+    //Checks on song
     if (!song) {
       return interaction.reply({
         content: "No videos for this query",
         ephemeral: true,
       });
     }
-
-    if (!ytstream.yt_validate(song.url)) {
+    if (!yt_validate(song.url)) {
       return interaction.reply({
-        content: "Invalid URL",
+        content: "Invalid URL or queue",
         ephemeral: true,
       });
     }
-    //Add to queue
-    if (state.queue.length !== 0) {
-      interaction.reply({ content: `Added to queue ${song.title}` });
+    //Play now if queue is empty
+    if (queue.length === 0) {
       queueAdd(song);
+      await playSong();
     } else {
       queueAdd(song);
-      interaction.reply({ content: `Started queue with ${song.title}` });
-      let stream = await ytstream.stream(song.url);
-
-      let resource = createAudioResource(stream.stream, {
-        inputType: stream.type,
-      });
-      player.play(resource);
-
-      getVoiceConnection(interaction.guild.id).subscribe(player);
     }
+    return interaction.reply({
+      content:
+        queue.length === 0
+          ? `Now playing **${song.title}**`
+          : `**${song.title}** added to queue`,
+    });
   },
 };
