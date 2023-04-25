@@ -11,7 +11,7 @@ const {
   NoSubscriberBehavior,
   getVoiceConnection,
 } = require("@discordjs/voice");
-const { add: queueAdd, isEmpty } = require("../runtime/queue");
+const { add: queueAdd, state } = require("../runtime/queue");
 const player = require("../runtime/player");
 
 module.exports = {
@@ -54,10 +54,11 @@ module.exports = {
       });
     }
     //Add to queue
-    queueAdd(song);
-    if (!isEmpty) {
+    if (state.queue.length !== 0) {
       interaction.reply({ content: `Added to queue ${song.title}` });
+      queueAdd(song);
     } else {
+      queueAdd(song);
       interaction.reply({ content: `Started queue with ${song.title}` });
       let stream = await ytstream.stream(song.url);
 

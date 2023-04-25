@@ -9,11 +9,9 @@ const add = (song) => {
   state.paused = false;
 };
 
-const isEmpty = state.queue.length === 0;
-
 const skip = () => {
-  if (isEmpty) {
-    throw new Error("No skippable songs");
+  if (state.queue.length === 0) {
+    return undefined;
   }
   const skippedSong = state.queue[0];
   state.queue.shift();
@@ -22,4 +20,4 @@ const skip = () => {
   return skippedSong;
 };
 
-module.exports = { state, skip, add, isEmpty };
+module.exports = { state, skip, add };
