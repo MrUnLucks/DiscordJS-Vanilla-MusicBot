@@ -1,7 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const songFinder = require("../utils/songFinder");
 const ytstream = require("play-dl");
-const player = require("../runtime/player");
 const {
   createAudioPlayer,
   createAudioResource,
@@ -10,11 +9,14 @@ const {
   entersState,
   AudioPlayerStatus,
   NoSubscriberBehavior,
+  getVoiceConnection,
 } = require("@discordjs/voice");
+const { add: queueAdd, isEmpty } = require("../runtime/queue");
+const player = require("../runtime/player");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("play")
+    .setName("playtest")
     .setDescription("Play a song from Youtube")
     .addStringOption((option) =>
       option
@@ -27,13 +29,16 @@ module.exports = {
       interaction.member.user.id
     );
     const voiceChannelId = member.voice.channelId;
-    if (voiceChannelId == null) {
-      return interaction.reply({
-        content: "You need to be in a voice channel to request a song",
-        ephemeral: true,
+    //If the VoiceConnection is not established create one
+    if (!getVoiceConnection(interaction.guild.id)) {
+      joinVoiceChannel({
+        channelId: voiceChannelId,
+        guildId: interaction.guild.id,
+        adapterCreator: interaction.guild.voiceAdapterCreator,
       });
     }
     let userQuery = interaction.options._hoistedOptions[0].value;
+    //Checks
     let song = await songFinder(userQuery);
     if (!song) {
       return interaction.reply({
@@ -48,34 +53,20 @@ module.exports = {
         ephemeral: true,
       });
     }
-    const connection = joinVoiceChannel({
-      channelId: voiceChannelId,
-      guildId: interaction.guild.id,
-      adapterCreator: interaction.guild.voiceAdapterCreator,
-    });
-    let stream = await ytstream.stream(song.url);
+    //Add to queue
+    queueAdd(song);
+    if (!isEmpty) {
+      interaction.reply({ content: `Added to queue ${song.title}` });
+    } else {
+      interaction.reply({ content: `Started queue with ${song.title}` });
+      let stream = await ytstream.stream(song.url);
 
-    let resource = createAudioResource(stream.stream, {
-      inputType: stream.type,
-    });
+      let resource = createAudioResource(stream.stream, {
+        inputType: stream.type,
+      });
+      player.play(resource);
 
-    player.play(resource);
-
-    connection.subscribe(player);
-    connection.on(
-      VoiceConnectionStatus.Disconnected,
-      async (oldState, newState) => {
-        try {
-          await Promise.race([
-            entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-            entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-          ]);
-          // Seems to be reconnecting to a new channel - ignore disconnect
-        } catch (error) {
-          // Seems to be a real disconnect which SHOULDN'T be recovered from
-          connection.destroy();
-        }
-      }
-    );
+      getVoiceConnection(interaction.guild.id).subscribe(player);
+    }
   },
 };
