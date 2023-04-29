@@ -59,6 +59,7 @@ player.on(AudioPlayerStatus.Idle, async () => {
     //TODO!!:This need a better solution for handling the destroy
     console.log(interactionGuildId);
     if (interactionGuildId) {
+      getVoiceConnection(interactionGuildId).unsubscribe();
       getVoiceConnection(interactionGuildId).destroy();
     }
   }
