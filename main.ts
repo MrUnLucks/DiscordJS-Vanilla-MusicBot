@@ -14,7 +14,7 @@ client.commands = new Collection();
 */
 const commandFiles = fs
   .readdirSync("./commands")
-  .filter((file) => file.endsWith(".js"));
+  .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
 const eventFiles = fs
   .readdirSync("./events")
   .filter((file) => file.endsWith(".js"));
