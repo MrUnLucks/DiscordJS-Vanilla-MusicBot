@@ -1,16 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const songFinder = require("../utils/songFinder");
 const { yt_validate } = require("play-dl");
-const {
-  createAudioPlayer,
-  createAudioResource,
-  joinVoiceChannel,
-  VoiceConnectionStatus,
-  entersState,
-  AudioPlayerStatus,
-  NoSubscriberBehavior,
-  getVoiceConnection,
-} = require("@discordjs/voice");
+const { joinVoiceChannel, getVoiceConnection } = require("@discordjs/voice");
 const { playSong, player } = require("../runtime/player");
 let { interactionGuildId } = require("../runtime/player");
 const { queue, queueAdd } = require("../runtime/queue");
