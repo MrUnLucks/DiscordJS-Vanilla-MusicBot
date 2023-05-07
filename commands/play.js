@@ -1,7 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const songFinder = require("../utils/songFinder");
-const ytstream = require("play-dl");
-const player = require("../runtime/player");
+const { yt_validate } = require("play-dl");
 const {
   createAudioPlayer,
   createAudioResource,
@@ -10,7 +9,11 @@ const {
   entersState,
   AudioPlayerStatus,
   NoSubscriberBehavior,
+  getVoiceConnection,
 } = require("@discordjs/voice");
+const { playSong, player } = require("../runtime/player");
+let { interactionGuildId } = require("../runtime/player");
+const { queue, queueAdd } = require("../runtime/queue");
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -23,59 +26,50 @@ module.exports = {
         .setRequired(true)
     ),
   async execute(interaction) {
+    //Checks on user state
     const member = interaction.guild.members.cache.get(
       interaction.member.user.id
     );
     const voiceChannelId = member.voice.channelId;
-    if (voiceChannelId == null) {
-      return interaction.reply({
-        content: "You need to be in a voice channel to request a song",
-        ephemeral: true,
+    //TODO the VC can be exported into his separate module
+    //If the VoiceConnection is not established create one
+    if (!getVoiceConnection(interaction.guild.id)) {
+      const connection = joinVoiceChannel({
+        channelId: voiceChannelId,
+        guildId: interaction.guild.id,
+        adapterCreator: interaction.guild.voiceAdapterCreator,
       });
+      connection.subscribe(player);
+      interactionGuildId = interaction.guild.id;
     }
     let userQuery = interaction.options._hoistedOptions[0].value;
+    //Search song
     let song = await songFinder(userQuery);
+    //Checks on song
     if (!song) {
       return interaction.reply({
         content: "No videos for this query",
         ephemeral: true,
       });
     }
-
-    if (!ytstream.yt_validate(song.url)) {
+    if (!yt_validate(song.url)) {
       return interaction.reply({
-        content: "Invalid URL",
+        content: "Invalid URL or queue",
         ephemeral: true,
       });
     }
-    const connection = joinVoiceChannel({
-      channelId: voiceChannelId,
-      guildId: interaction.guild.id,
-      adapterCreator: interaction.guild.voiceAdapterCreator,
+    //Play now if queue is empty
+    if (queue.length === 0) {
+      queueAdd(song);
+      await playSong();
+    } else {
+      queueAdd(song);
+    }
+    return interaction.reply({
+      content:
+        queue.length === 0
+          ? `Now playing **${song.title}**`
+          : `**${song.title}** added to queue`,
     });
-    let stream = await ytstream.stream(song.url);
-
-    let resource = createAudioResource(stream.stream, {
-      inputType: stream.type,
-    });
-
-    player.play(resource);
-
-    connection.subscribe(player);
-    connection.on(
-      VoiceConnectionStatus.Disconnected,
-      async (oldState, newState) => {
-        try {
-          await Promise.race([
-            entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-            entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-          ]);
-          // Seems to be reconnecting to a new channel - ignore disconnect
-        } catch (error) {
-          // Seems to be a real disconnect which SHOULDN'T be recovered from
-          connection.destroy();
-        }
-      }
-    );
   },
 };
