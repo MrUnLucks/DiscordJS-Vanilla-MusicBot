@@ -13,4 +13,8 @@ const queueSkip = () => {
   return skippedSong;
 };
 
-module.exports = { queue, queueAdd, queueSkip };
+const resetQueue = () => {
+  queue = [];
+};
+
+module.exports = { queue, queueAdd, queueSkip, resetQueue };
