@@ -35,16 +35,20 @@ module.exports = {
     }
     let userQuery = interaction.options._hoistedOptions[0].value;
     //Search song
+    interaction.reply({
+      content: "Loading...",
+      ephemeral: true,
+    });
     let song = await songFinder(userQuery);
     //Checks on song
     if (!song) {
-      return interaction.reply({
+      return interaction.editReply({
         content: "No videos for this query",
         ephemeral: true,
       });
     }
     if (!yt_validate(song.url)) {
-      return interaction.reply({
+      return interaction.editReply({
         content: "Invalid URL or queue",
         ephemeral: true,
       });
@@ -56,7 +60,7 @@ module.exports = {
     } else {
       queueAdd(song);
     }
-    return interaction.reply({
+    return interaction.editReply({
       content:
         queue.length === 0
           ? `Now playing **${song.title}**`
