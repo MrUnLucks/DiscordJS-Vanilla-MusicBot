@@ -1,16 +1,4 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const songFinder = require("../utils/songFinder");
-const ytstream = require("play-dl");
-const {
-  createAudioPlayer,
-  createAudioResource,
-  joinVoiceChannel,
-  VoiceConnectionStatus,
-  getVoiceConnection,
-  entersState,
-  AudioPlayerStatus,
-  NoSubscriberBehavior,
-} = require("@discordjs/voice");
 const { skipSong } = require("../runtime/player");
 
 module.exports = {
