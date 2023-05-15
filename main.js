@@ -1,6 +1,7 @@
 // Require the necessary discord.js classes
 const { Client, Collection } = require("discord.js");
 const fs = require("fs");
+const { resetQueue } = require("./runtime/queue");
 require("dotenv").config();
 
 // Create a new client instance
@@ -64,6 +65,11 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 });
-
+client.on("voiceStateUpdate", (oldState, newState) => {
+  if (newState.channel === null) {
+    getVoiceConnection(oldState.guild.id);
+    resetQueue();
+  }
+});
 // Login to Discord with your client's token
 client.login();
